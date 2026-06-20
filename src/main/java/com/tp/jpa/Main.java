@@ -62,9 +62,72 @@ public class Main {
     // ── Submenús ─────────────────────────────────────────────────
 
     private static void menuCategorias() {
-        // TODO: Implementar submenú de Categorías.
-        // Opciones: 1-Alta  2-Modificar  3-Baja lógica  4-Listado  0-Volver
-        System.out.println("[Categorías] → TODO: implementar");
+        boolean volver = false;
+        while (!volver) {
+            System.out.println();
+            System.out.println("--- Categorías ---");
+            System.out.println("1. Alta");
+            System.out.println("2. Modificar");
+            System.out.println("3. Baja");
+            System.out.println("4. Listado");
+            System.out.println("0. Volver");
+            String op = leerLinea("Opción: ");
+            switch (op) {
+                case "1": {
+                    String nombre = "";
+                    while (nombre.isEmpty()) {
+                        nombre = leerLinea("Nombre (obligatorio): ");
+                        if (nombre.isEmpty()) System.out.println("El nombre no puede estar vacío.");
+                    }
+                    String descripcion = leerLinea("Descripción (opcional): ");
+                    Categoria cat = Categoria.builder()
+                            .nombre(nombre)
+                            .descripcion(descripcion.isEmpty() ? null : descripcion)
+                            .build();
+                    Categoria guardada = categoriaRepo.guardar(cat);
+                    System.out.println("Categoría creada con ID: " + guardada.getId());
+                    break;
+                }
+                case "2": {
+                    List<Categoria> activas = categoriaRepo.listarActivos();
+                    if (activas.isEmpty()) { System.out.println("No hay categorías activas."); break; }
+                    activas.forEach(c -> System.out.printf("  [%d] %s — %s%n", c.getId(), c.getNombre(), c.getDescripcion()));
+                    long id = leerEntero("ID a modificar: ");
+                    Optional<Categoria> opt = categoriaRepo.buscarPorId(id);
+                    if (opt.isEmpty() || opt.get().isEliminado()) { System.out.println("Categoría no encontrada."); break; }
+                    Categoria cat = opt.get();
+                    System.out.printf("Nombre actual: %s%n", cat.getNombre());
+                    System.out.printf("Descripción actual: %s%n", cat.getDescripcion());
+                    String nuevoNombre = leerOpcional("Nuevo nombre", cat.getNombre());
+                    if (nuevoNombre.isEmpty()) { System.out.println("El nombre no puede estar vacío."); break; }
+                    String nuevaDesc = leerOpcional("Nueva descripción", cat.getDescripcion() == null ? "" : cat.getDescripcion());
+                    cat.setNombre(nuevoNombre);
+                    cat.setDescripcion(nuevaDesc.isEmpty() ? null : nuevaDesc);
+                    categoriaRepo.guardar(cat);
+                    System.out.println("Categoría actualizada.");
+                    break;
+                }
+                case "3": {
+                    long id = leerEntero("ID a dar de baja: ");
+                    Optional<Categoria> opt = categoriaRepo.buscarPorId(id);
+                    if (opt.isEmpty() || opt.get().isEliminado()) { System.out.println("Categoría no encontrada."); break; }
+                    String nombre = opt.get().getNombre();
+                    boolean ok = categoriaRepo.eliminarLogico(id);
+                    if (ok) System.out.println("Categoría '" + nombre + "' dada de baja.");
+                    else System.out.println("Error al dar de baja.");
+                    break;
+                }
+                case "4": {
+                    List<Categoria> activas = categoriaRepo.listarActivos();
+                    if (activas.isEmpty()) { System.out.println("No hay categorías activas."); break; }
+                    System.out.printf("%-5s %-20s %s%n", "ID", "Nombre", "Descripción");
+                    activas.forEach(c -> System.out.printf("%-5d %-20s %s%n", c.getId(), c.getNombre(), c.getDescripcion() == null ? "" : c.getDescripcion()));
+                    break;
+                }
+                case "0": volver = true; break;
+                default: System.out.println("Opción inválida.");
+            }
+        }
     }
 
     private static void menuProductos() {
