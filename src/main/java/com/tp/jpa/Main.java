@@ -273,9 +273,129 @@ public class Main {
     }
 
     private static void menuUsuarios() {
-        // TODO: Implementar submenú de Usuarios.
-        // Opciones: 1-Alta  2-Modificar  3-Baja lógica  4-Listado  5-Buscar por mail  0-Volver
-        System.out.println("[Usuarios] → TODO: implementar");
+        boolean volver = false;
+        while (!volver) {
+            System.out.println();
+            System.out.println("--- Usuarios ---");
+            System.out.println("1. Alta");
+            System.out.println("2. Modificar");
+            System.out.println("3. Baja");
+            System.out.println("4. Listado");
+            System.out.println("5. Buscar por mail");
+            System.out.println("0. Volver");
+            String op = leerLinea("Opción: ");
+            switch (op) {
+                case "1": {
+                    String nombre = "";
+                    while (nombre.isEmpty()) {
+                        nombre = leerLinea("Nombre (obligatorio): ");
+                        if (nombre.isEmpty()) System.out.println("El nombre no puede estar vacío.");
+                    }
+                    String apellido = "";
+                    while (apellido.isEmpty()) {
+                        apellido = leerLinea("Apellido (obligatorio): ");
+                        if (apellido.isEmpty()) System.out.println("El apellido no puede estar vacío.");
+                    }
+                    String mail = "";
+                    while (mail.isEmpty()) {
+                        mail = leerLinea("Mail (obligatorio): ");
+                        if (mail.isEmpty()) { System.out.println("El mail no puede estar vacío."); continue; }
+                        if (usuarioRepo.buscarPorMail(mail).isPresent()) {
+                            System.out.println("El mail ya está en uso por otro usuario.");
+                            mail = "";
+                        }
+                    }
+                    String celular = leerLinea("Celular (opcional): ");
+                    String contrasena = "";
+                    while (contrasena.isEmpty()) {
+                        contrasena = leerLinea("Contraseña (obligatorio): ");
+                        if (contrasena.isEmpty()) System.out.println("La contraseña no puede estar vacía.");
+                    }
+                    Rol rol = leerEnum("Rol:", Rol.class);
+                    Usuario guardado = usuarioRepo.guardar(Usuario.builder()
+                            .nombre(nombre)
+                            .apellido(apellido)
+                            .mail(mail)
+                            .celular(celular.isEmpty() ? null : celular)
+                            .contraseña(contrasena)
+                            .rol(rol)
+                            .build());
+                    System.out.println("Usuario creado con ID: " + guardado.getId());
+                    break;
+                }
+                case "2": {
+                    List<Usuario> activos = usuarioRepo.listarActivos();
+                    if (activos.isEmpty()) { System.out.println("No hay usuarios activos."); break; }
+                    activos.forEach(u -> System.out.printf("  [%d] %s %s — %s [%s]%n",
+                            u.getId(), u.getNombre(), u.getApellido(), u.getMail(), u.getRol()));
+                    long id = leerEntero("ID a modificar: ");
+                    Optional<Usuario> opt = usuarioRepo.buscarPorId(id);
+                    if (opt.isEmpty() || opt.get().isEliminado()) { System.out.println("Usuario no encontrado."); break; }
+                    Usuario usuario = opt.get();
+
+                    System.out.printf("Nombre: %s | Apellido: %s | Mail: %s | Celular: %s | Rol: %s%n",
+                            usuario.getNombre(), usuario.getApellido(), usuario.getMail(),
+                            usuario.getCelular() == null ? "(vacío)" : usuario.getCelular(), usuario.getRol());
+
+                    usuario.setNombre(leerOpcional("Nombre", usuario.getNombre()));
+                    usuario.setApellido(leerOpcional("Apellido", usuario.getApellido()));
+
+                    String nuevoMail = leerOpcional("Mail", usuario.getMail());
+                    Optional<Usuario> conflicto = usuarioRepo.buscarPorMail(nuevoMail);
+                    if (conflicto.isPresent() && !conflicto.get().getId().equals(usuario.getId())) {
+                        System.out.println("El mail ya está en uso por otro usuario.");
+                        break;
+                    }
+                    usuario.setMail(nuevoMail);
+
+                    String celularActual = usuario.getCelular() == null ? "" : usuario.getCelular();
+                    usuario.setCelular(leerOpcional("Celular", celularActual));
+
+                    String nuevaContrasena = leerLinea("Contraseña [****] (Enter=conservar): ");
+                    if (!nuevaContrasena.isEmpty()) usuario.setContraseña(nuevaContrasena);
+
+                    if (confirmar("¿Cambiar rol? Actual: " + usuario.getRol())) {
+                        usuario.setRol(leerEnum("Nuevo rol:", Rol.class));
+                    }
+
+                    usuarioRepo.guardar(usuario);
+                    System.out.println("Usuario actualizado.");
+                    break;
+                }
+                case "3": {
+                    long id = leerEntero("ID a dar de baja: ");
+                    Optional<Usuario> opt = usuarioRepo.buscarPorId(id);
+                    if (opt.isEmpty() || opt.get().isEliminado()) { System.out.println("Usuario no encontrado."); break; }
+                    Usuario u = opt.get();
+                    if (usuarioRepo.eliminarLogico(id)) {
+                        System.out.println("Usuario '" + u.getNombre() + " " + u.getApellido() + "' dado de baja.");
+                    } else {
+                        System.out.println("Error al dar de baja.");
+                    }
+                    break;
+                }
+                case "4": {
+                    List<Usuario> activos = usuarioRepo.listarActivos();
+                    if (activos.isEmpty()) { System.out.println("No hay usuarios activos."); break; }
+                    System.out.printf("%-5s %-15s %-15s %-30s %-10s%n", "ID", "Nombre", "Apellido", "Mail", "Rol");
+                    activos.forEach(u -> System.out.printf("%-5d %-15s %-15s %-30s %-10s%n",
+                            u.getId(), u.getNombre(), u.getApellido(), u.getMail(), u.getRol()));
+                    break;
+                }
+                case "5": {
+                    String mail = leerLinea("Mail a buscar: ");
+                    Optional<Usuario> opt = usuarioRepo.buscarPorMail(mail);
+                    if (opt.isEmpty()) { System.out.println("No se encontró usuario con ese mail."); break; }
+                    Usuario u = opt.get();
+                    System.out.printf("ID: %d | Nombre: %s %s | Mail: %s | Celular: %s | Rol: %s%n",
+                            u.getId(), u.getNombre(), u.getApellido(), u.getMail(),
+                            u.getCelular() == null ? "(vacío)" : u.getCelular(), u.getRol());
+                    break;
+                }
+                case "0": volver = true; break;
+                default: System.out.println("Opción inválida.");
+            }
+        }
     }
 
     private static void menuPedidos() {
