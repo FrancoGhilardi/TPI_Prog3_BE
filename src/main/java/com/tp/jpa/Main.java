@@ -93,4 +93,75 @@ public class Main {
         System.out.println("[Reportes] → TODO: implementar");
     }
 
+    // ── Helpers de consola ────────────────────────────────────────
+
+    /** Lee una línea y la devuelve sin espacios. */
+    private static String leerLinea(String prompt) {
+        System.out.print(prompt);
+        return sc.nextLine().trim();
+    }
+
+    /**
+     * Si el usuario ingresa algo no vacío lo devuelve; si Enter en blanco
+     * devuelve el valor actual (patrón "campo vacío = conservar").
+     */
+    private static String leerOpcional(String prompt, String actual) {
+        System.out.print(prompt + " [" + actual + "]: ");
+        String input = sc.nextLine().trim();
+        return input.isEmpty() ? actual : input;
+    }
+
+    /** Pide un entero hasta que sea válido. */
+    private static int leerEntero(String prompt) {
+        while (true) {
+            String input = leerLinea(prompt);
+            try {
+                return Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Ingresá un número entero válido.");
+            }
+        }
+    }
+
+    /** Pide un Double hasta que sea válido. */
+    private static double leerDouble(String prompt) {
+        while (true) {
+            String input = leerLinea(prompt);
+            try {
+                return Double.parseDouble(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Ingresá un número decimal válido (usá punto).");
+            }
+        }
+    }
+
+    /**
+     * Muestra las constantes del enum numeradas y pide selección.
+     * Reintenta hasta que sea válida.
+     */
+    private static <E extends Enum<E>> E leerEnum(String prompt, Class<E> enumClass) {
+        E[] valores = enumClass.getEnumConstants();
+        while (true) {
+            System.out.println(prompt);
+            for (int i = 0; i < valores.length; i++) {
+                System.out.println("  " + (i + 1) + ". " + valores[i].name());
+            }
+            System.out.print("Opción: ");
+            String input = sc.nextLine().trim();
+            try {
+                int idx = Integer.parseInt(input) - 1;
+                if (idx >= 0 && idx < valores.length) {
+                    return valores[idx];
+                }
+            } catch (NumberFormatException ignored) {}
+            System.out.println("Opción inválida.");
+        }
+    }
+
+    /** Pide confirmación S/N. Devuelve true si el usuario escribe S o s. */
+    private static boolean confirmar(String prompt) {
+        String resp = leerLinea(prompt + " (S/N): ");
+        return resp.equalsIgnoreCase("S");
+    }
+
 }

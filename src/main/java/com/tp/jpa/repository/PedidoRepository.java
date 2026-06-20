@@ -19,17 +19,35 @@ public class PedidoRepository extends BaseRepository<Pedido> {
 
     /**
      * Retorna los pedidos activos del usuario indicado.
+     * Navega desde Usuario.pedidos porque Pedido no tiene campo usuario
+     * (relación @OneToMany unidireccional con @JoinColumn en el padre).
      */
     public List<Pedido> buscarPorUsuario(Long idUsuario) {
-        // TODO: implementar
-        throw new UnsupportedOperationException("Método no implementado aún");
+        EntityManager em = emf.createEntityManager();
+        try {
+            String jpql = "SELECT p FROM Usuario u JOIN u.pedidos p " +
+                          "WHERE u.id = :uid AND p.eliminado = false";
+            return em.createQuery(jpql, Pedido.class)
+                     .setParameter("uid", idUsuario)
+                     .getResultList();
+        } finally {
+            em.close();
+        }
     }
 
     /**
      * Retorna los pedidos activos que coinciden con el estado indicado.
+     * Pedido tiene campo estado directamente, no requiere JOIN.
      */
     public List<Pedido> buscarPorEstado(EstadoPedido estadoPedido) {
-        // TODO: implementar
-        throw new UnsupportedOperationException("Método no implementado aún");
+        EntityManager em = emf.createEntityManager();
+        try {
+            String jpql = "SELECT p FROM Pedido p WHERE p.estado = :estado AND p.eliminado = false";
+            return em.createQuery(jpql, Pedido.class)
+                     .setParameter("estado", estadoPedido)
+                     .getResultList();
+        } finally {
+            em.close();
+        }
     }
 }

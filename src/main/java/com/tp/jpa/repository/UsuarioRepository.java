@@ -18,10 +18,18 @@ public class UsuarioRepository extends BaseRepository<Usuario> {
     }
 
     /**
-     * Retorna el usuario activo con el mail indicado.
+     * Retorna el usuario activo con el mail indicado, o empty si no existe.
      */
     public Optional<Usuario> buscarPorMail(String mail) {
-        // TODO: implementar
-        throw new UnsupportedOperationException("Método no implementado aún");
+        EntityManager em = emf.createEntityManager();
+        try {
+            String jpql = "SELECT u FROM Usuario u WHERE u.mail = :mail AND u.eliminado = false";
+            List<Usuario> resultado = em.createQuery(jpql, Usuario.class)
+                                        .setParameter("mail", mail)
+                                        .getResultList();
+            return resultado.isEmpty() ? Optional.empty() : Optional.of(resultado.get(0));
+        } finally {
+            em.close();
+        }
     }
 }
