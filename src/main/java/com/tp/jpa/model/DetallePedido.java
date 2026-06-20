@@ -15,20 +15,20 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
 public class DetallePedido extends Base {
 
-    @Column(name = "cantidad",nullable = false)
-    private Integer cantidad;
+  @Column(name = "cantidad", nullable = false)
+  private Integer cantidad;
 
-    @Column(name = "subtotal", nullable = false)
-    private Double subtotal;
+  @Column(name = "subtotal", nullable = false)
+  private Double subtotal;
 
-    @EqualsAndHashCode.Include
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "producto_id",nullable = false)
-    private Producto producto;
+  @EqualsAndHashCode.Include
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "producto_id", nullable = false)
+  private Producto producto;
 
-    public void calcularSubtotal() {
-        if (this.producto != null && this.cantidad != null) {
-            this.subtotal = this.producto.getPrecio() * this.cantidad;
-        }
+  public void calcularSubtotal() {
+    if (this.producto != null && this.cantidad != null) {
+      this.subtotal = this.producto.getPrecio() * this.cantidad;
     }
+  }
 }

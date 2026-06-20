@@ -3,12 +3,11 @@ package com.tp.jpa.model;
 import com.tp.jpa.model.enums.EstadoPedido;
 import com.tp.jpa.model.enums.FormaPago;
 import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
-
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "pedidos")
@@ -17,69 +16,71 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@ToString(callSuper = true, exclude = {"detalles"})
+@ToString(
+    callSuper = true,
+    exclude = {"detalles"})
 @EqualsAndHashCode(callSuper = true)
 public class Pedido extends Base implements Calculable {
 
-    @Column(name = "fecha", updatable = false)
-    @Builder.Default
-    private LocalDate fecha = LocalDate.now();
+  @Column(name = "fecha", updatable = false)
+  @Builder.Default
+  private LocalDate fecha = LocalDate.now();
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado",nullable = false, length = 30)
-    @Builder.Default
-    private EstadoPedido estado = EstadoPedido.PENDIENTE;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "estado", nullable = false, length = 30)
+  @Builder.Default
+  private EstadoPedido estado = EstadoPedido.PENDIENTE;
 
-    @Column(name = "total", nullable = false)
-    @Builder.Default
-    private Double total = 0.0;
+  @Column(name = "total", nullable = false)
+  @Builder.Default
+  private Double total = 0.0;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "forma_pago",nullable = false, length = 20)
-    private FormaPago formaPago;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "forma_pago", nullable = false, length = 20)
+  private FormaPago formaPago;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "pedido_id")
-    @Builder.Default
-    private Set<DetallePedido> detalles = new HashSet<>();
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+  @JoinColumn(name = "pedido_id")
+  @Builder.Default
+  private Set<DetallePedido> detalles = new HashSet<>();
 
-    public void addDetallePedido(int cantidad, Producto producto) {
-        DetallePedido detalle = DetallePedido.builder()
-                .cantidad(cantidad)
-                .producto(producto)
-                .subtotal(producto.getPrecio() * cantidad)
-                .build();
+  public void addDetallePedido(int cantidad, Producto producto) {
+    DetallePedido detalle =
+        DetallePedido.builder()
+            .cantidad(cantidad)
+            .producto(producto)
+            .subtotal(producto.getPrecio() * cantidad)
+            .build();
 
-        this.detalles.add(detalle);
-        this.total += detalle.getSubtotal();
+    this.detalles.add(detalle);
+    this.total += detalle.getSubtotal();
+  }
+
+  @Override
+  public void calcularTotal() {
+    double acumulador = 0.0;
+    for (DetallePedido detalle : detalles) {
+      if (detalle.getSubtotal() != null) {
+        acumulador += detalle.getSubtotal();
+      }
     }
+    this.total = acumulador;
+  }
 
-    @Override
-    public void calcularTotal() {
-        double acumulador = 0.0;
-        for (DetallePedido detalle : detalles) {
-            if (detalle.getSubtotal() != null) {
-                acumulador += detalle.getSubtotal();
-            }
-        }
-        this.total = acumulador;
+  public DetallePedido findDetallePedidoByProducto(Producto producto) {
+    for (DetallePedido detalle : detalles) {
+      if (detalle.getProducto() != null && detalle.getProducto().getId().equals(producto.getId())) {
+        return detalle;
+      }
     }
+    return null;
+  }
 
-    public DetallePedido findDetallePedidoByProducto(Producto producto) {
-        for (DetallePedido detalle : detalles) {
-            if (detalle.getProducto() != null &&
-                    detalle.getProducto().getId().equals(producto.getId())) {
-                return detalle;
-            }
-        }
-        return null;
+  public void deleteDetallePedidoByProducto(Producto producto) {
+    DetallePedido detalleEncotrado = findDetallePedidoByProducto(producto);
+    if (detalleEncotrado != null) {
+      detalles.remove(detalleEncotrado);
+      calcularTotal();
     }
-
-    public void deleteDetallePedidoByProducto(Producto producto) {
-        DetallePedido detalleEncotrado = findDetallePedidoByProducto(producto);
-        if (detalleEncotrado != null) {
-            detalles.remove(detalleEncotrado);
-            calcularTotal();
-        }
-    }
+  }
 }

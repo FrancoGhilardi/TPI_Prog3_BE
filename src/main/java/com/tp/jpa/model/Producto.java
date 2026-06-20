@@ -17,25 +17,23 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class Producto extends Base {
 
-    @EqualsAndHashCode.Include
-    @Column(name = "nombre", nullable = false,length = 100)
-    private String nombre;
+  @EqualsAndHashCode.Include
+  @Column(name = "nombre", nullable = false, length = 100)
+  private String nombre;
 
-    @Column(name = "precio", nullable = false)
-    private Double precio;
+  @Column(name = "precio", nullable = false)
+  private Double precio;
 
-    @Column(name = "descripcion",length = 500)
-    private String descripcion;
+  @Column(name = "descripcion", length = 500)
+  private String descripcion;
 
-    @Column(name = "stock",nullable = false)
-    private Integer stock;
+  @Column(name = "stock", nullable = false)
+  private Integer stock;
 
-    @Column(name = "imagen")
-    private String imagen;
+  @Column(name = "imagen")
+  private String imagen;
 
-    @Builder.Default
-    @Column(name = "disponible")
-    private Boolean disponible = Boolean.TRUE;
-
-
+  @Builder.Default
+  @Column(name = "disponible")
+  private Boolean disponible = Boolean.TRUE;
 }
