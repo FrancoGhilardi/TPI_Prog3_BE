@@ -14,8 +14,10 @@ import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityTransaction;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Scanner;
 
@@ -131,9 +133,143 @@ public class Main {
     }
 
     private static void menuProductos() {
-        // TODO: Implementar submenú de Productos.
-        // Opciones: 1-Alta  2-Modificar  3-Baja lógica  4-Listado  0-Volver
-        System.out.println("[Productos] → TODO: implementar");
+        boolean volver = false;
+        while (!volver) {
+            System.out.println();
+            System.out.println("--- Productos ---");
+            System.out.println("1. Alta");
+            System.out.println("2. Modificar");
+            System.out.println("3. Baja");
+            System.out.println("4. Listado");
+            System.out.println("0. Volver");
+            String op = leerLinea("Opción: ");
+            switch (op) {
+                case "1": {
+                    List<Categoria> cats = categoriaRepo.listarActivos();
+                    if (cats.isEmpty()) { System.out.println("No hay categorías activas. Cree una primero."); break; }
+                    cats.forEach(c -> System.out.printf("  [%d] %s%n", c.getId(), c.getNombre()));
+                    long catId = leerEntero("ID de categoría: ");
+
+                    String nombre = "";
+                    while (nombre.isEmpty()) {
+                        nombre = leerLinea("Nombre (obligatorio): ");
+                        if (nombre.isEmpty()) System.out.println("El nombre no puede estar vacío.");
+                    }
+                    String descripcion = leerLinea("Descripción (opcional): ");
+
+                    double precio = 0;
+                    while (precio <= 0) {
+                        precio = leerDouble("Precio (> 0): ");
+                        if (precio <= 0) System.out.println("El precio debe ser mayor que 0.");
+                    }
+
+                    int stock = -1;
+                    while (stock < 0) {
+                        stock = leerEntero("Stock (>= 0): ");
+                        if (stock < 0) System.out.println("El stock no puede ser negativo.");
+                    }
+
+                    String imagen = leerLinea("Imagen URL (opcional): ");
+                    boolean disponible = confirmar("¿Disponible?");
+
+                    Producto prod = Producto.builder()
+                            .nombre(nombre)
+                            .descripcion(descripcion.isEmpty() ? null : descripcion)
+                            .precio(precio)
+                            .stock(stock)
+                            .imagen(imagen.isEmpty() ? null : imagen)
+                            .disponible(disponible)
+                            .build();
+                    try {
+                        Producto guardado = productoRepo.guardarEnCategoria(prod, catId);
+                        System.out.println("Producto creado con ID: " + guardado.getId() + ", Categoría ID: " + catId);
+                    } catch (RuntimeException e) {
+                        System.out.println("Error: " + e.getMessage());
+                    }
+                    break;
+                }
+                case "2": {
+                    List<Producto> activos = productoRepo.listarActivos();
+                    if (activos.isEmpty()) { System.out.println("No hay productos activos."); break; }
+                    activos.forEach(p -> System.out.printf("  [%d] %s — $%.2f stock:%d%n",
+                            p.getId(), p.getNombre(), p.getPrecio(), p.getStock()));
+                    long id = leerEntero("ID a modificar: ");
+                    Optional<Producto> opt = productoRepo.buscarPorId(id);
+                    if (opt.isEmpty() || opt.get().isEliminado()) { System.out.println("Producto no encontrado."); break; }
+                    Producto prod = opt.get();
+
+                    System.out.printf("Nombre: %s | Desc: %s | Precio: %.2f | Stock: %d | Disponible: %s%n",
+                            prod.getNombre(),
+                            prod.getDescripcion() == null ? "(vacío)" : prod.getDescripcion(),
+                            prod.getPrecio(), prod.getStock(),
+                            Boolean.TRUE.equals(prod.getDisponible()) ? "S" : "N");
+
+                    String nuevoNombre = leerOpcional("Nombre", prod.getNombre());
+                    if (nuevoNombre.isEmpty()) { System.out.println("El nombre no puede estar vacío."); break; }
+                    prod.setNombre(nuevoNombre);
+
+                    String descActual = prod.getDescripcion() == null ? "" : prod.getDescripcion();
+                    prod.setDescripcion(leerOpcional("Descripción", descActual));
+
+                    String precioStr = leerLinea("Precio [" + prod.getPrecio() + "] (Enter=conservar): ");
+                    if (!precioStr.isEmpty()) {
+                        try {
+                            double np = Double.parseDouble(precioStr);
+                            if (np <= 0) { System.out.println("Precio debe ser > 0."); break; }
+                            prod.setPrecio(np);
+                        } catch (NumberFormatException e) { System.out.println("Precio inválido."); break; }
+                    }
+
+                    String stockStr = leerLinea("Stock [" + prod.getStock() + "] (Enter=conservar): ");
+                    if (!stockStr.isEmpty()) {
+                        try {
+                            int ns = Integer.parseInt(stockStr);
+                            if (ns < 0) { System.out.println("Stock debe ser >= 0."); break; }
+                            prod.setStock(ns);
+                        } catch (NumberFormatException e) { System.out.println("Stock inválido."); break; }
+                    }
+
+                    String imagenActual = prod.getImagen() == null ? "" : prod.getImagen();
+                    prod.setImagen(leerOpcional("Imagen", imagenActual));
+
+                    String dispStr = leerLinea("Disponible [" + (Boolean.TRUE.equals(prod.getDisponible()) ? "S" : "N") + "] (Enter=conservar): ");
+                    if (!dispStr.isEmpty()) prod.setDisponible(dispStr.equalsIgnoreCase("S"));
+
+                    productoRepo.guardar(prod);
+                    System.out.println("Producto actualizado.");
+                    break;
+                }
+                case "3": {
+                    long id = leerEntero("ID a dar de baja: ");
+                    Optional<Producto> opt = productoRepo.buscarPorId(id);
+                    if (opt.isEmpty() || opt.get().isEliminado()) { System.out.println("Producto no encontrado."); break; }
+                    String nombre = opt.get().getNombre();
+                    if (productoRepo.eliminarLogico(id)) System.out.println("Producto '" + nombre + "' dado de baja.");
+                    else System.out.println("Error al dar de baja.");
+                    break;
+                }
+                case "4": {
+                    // Mapa productoId→nombreCategoria navegando desde el lado propietario (Categoria.productos)
+                    List<Categoria> cats = categoriaRepo.listarActivos();
+                    Map<Long, String> catPorProd = new HashMap<>();
+                    for (Categoria c : cats) {
+                        productoRepo.buscarPorCategoria(c.getId())
+                                .forEach(p -> catPorProd.put(p.getId(), c.getNombre()));
+                    }
+                    List<Producto> activos = productoRepo.listarActivos();
+                    if (activos.isEmpty()) { System.out.println("No hay productos activos."); break; }
+                    System.out.printf("%-5s %-20s %-10s %-7s %-12s %-15s%n",
+                            "ID", "Nombre", "Precio", "Stock", "Disponible", "Categoría");
+                    activos.forEach(p -> System.out.printf("%-5d %-20s $%-9.2f %-7d %-12s %-15s%n",
+                            p.getId(), p.getNombre(), p.getPrecio(), p.getStock(),
+                            Boolean.TRUE.equals(p.getDisponible()) ? "Sí" : "No",
+                            catPorProd.getOrDefault(p.getId(), "—")));
+                    break;
+                }
+                case "0": volver = true; break;
+                default: System.out.println("Opción inválida.");
+            }
+        }
     }
 
     private static void menuUsuarios() {

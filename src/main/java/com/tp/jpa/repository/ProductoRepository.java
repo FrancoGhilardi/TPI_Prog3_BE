@@ -3,6 +3,7 @@ package com.tp.jpa.repository;
 import com.tp.jpa.model.Categoria;
 import com.tp.jpa.model.Producto;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
 
 import java.util.List;
 
@@ -17,9 +18,32 @@ public class ProductoRepository extends BaseRepository<Producto> {
     }
 
     /**
-     * Retorna los productos activos que pertenecen a la categoría indicada.
-     * Navega desde Categoria.productos porque Producto no tiene campo categoria
-     * (relación @OneToMany unidireccional con @JoinColumn en el padre).
+     * Persiste un producto nuevo asociándolo a la categoría gestionada.
+     * Usa cascade ALL de Categoria.productos para setear la FK categoria_id.
+     */
+    public Producto guardarEnCategoria(Producto producto, Long categoriaId) {
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        try {
+            tx.begin();
+            Categoria cat = em.find(Categoria.class, categoriaId);
+            if (cat == null || cat.isEliminado()) {
+                throw new IllegalArgumentException("Categoría no encontrada: " + categoriaId);
+            }
+            cat.addProducto(producto);
+            tx.commit();
+            return producto;
+        } catch (RuntimeException e) {
+            if (tx.isActive()) tx.rollback();
+            throw e;
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Retorna los productos activos de una categoría. Navega desde Categoria.productos
+     * porque Producto no tiene campo categoria (relación unidireccional, dueño: Categoria).
      */
     public List<Producto> buscarPorCategoria(Long categoriaId) {
         EntityManager em = emf.createEntityManager();
