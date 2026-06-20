@@ -566,10 +566,73 @@ public class Main {
     }
 
     private static void menuReportes() {
-        // TODO: Implementar submenú de Reportes.
-        // Opciones: 1-Productos por categoría  2-Pedidos por usuario
-        //           3-Pedidos por estado  4-Total facturado  0-Volver
-        System.out.println("[Reportes] → TODO: implementar");
+        boolean volver = false;
+        while (!volver) {
+            System.out.println();
+            System.out.println("--- Reportes ---");
+            System.out.println("1. Productos por categoría");
+            System.out.println("2. Pedidos por usuario");
+            System.out.println("3. Pedidos por estado");
+            System.out.println("4. Total facturado");
+            System.out.println("0. Volver");
+            String op = leerLinea("Opción: ");
+            switch (op) {
+                case "1": {
+                    List<Categoria> cats = categoriaRepo.listarActivos();
+                    if (cats.isEmpty()) { System.out.println("No hay categorías activas."); break; }
+                    cats.forEach(c -> System.out.printf("  [%d] %s%n", c.getId(), c.getNombre()));
+                    long id = leerEntero("ID de categoría: ");
+                    Optional<Categoria> optC = categoriaRepo.buscarPorId(id);
+                    if (optC.isEmpty() || optC.get().isEliminado()) { System.out.println("Categoría no encontrada."); break; }
+                    List<Producto> prods = productoRepo.buscarPorCategoria(id);
+                    if (prods.isEmpty()) { System.out.println("No hay productos en esa categoría."); break; }
+                    System.out.printf("%-5s %-20s %-10s %-7s%n", "ID", "Nombre", "Precio", "Stock");
+                    prods.forEach(p -> System.out.printf("%-5d %-20s $%-9.2f %-7d%n",
+                            p.getId(), p.getNombre(), p.getPrecio(), p.getStock()));
+                    break;
+                }
+                case "2": {
+                    List<Usuario> usuarios = usuarioRepo.listarActivos();
+                    if (usuarios.isEmpty()) { System.out.println("No hay usuarios activos."); break; }
+                    usuarios.forEach(u -> System.out.printf("  [%d] %s %s%n", u.getId(), u.getNombre(), u.getApellido()));
+                    long id = leerEntero("ID de usuario: ");
+                    Optional<Usuario> optU = usuarioRepo.buscarPorId(id);
+                    if (optU.isEmpty() || optU.get().isEliminado()) { System.out.println("Usuario no encontrado."); break; }
+                    List<Pedido> pedidos = pedidoRepo.buscarPorUsuario(id);
+                    if (pedidos.isEmpty()) { System.out.println("El usuario no tiene pedidos activos."); break; }
+                    System.out.printf("%-5s %-12s %-12s %-15s %-10s%n", "ID", "Fecha", "Estado", "Forma Pago", "Total");
+                    pedidos.forEach(p -> System.out.printf("%-5d %-12s %-12s %-15s $%.2f%n",
+                            p.getId(), p.getFecha(), p.getEstado(), p.getFormaPago(),
+                            p.getTotal() == null ? 0 : p.getTotal()));
+                    break;
+                }
+                case "3": {
+                    EstadoPedido estado = leerEnum("Estado a buscar:", EstadoPedido.class);
+                    Map<Long, String> usuarioPorPedido = new HashMap<>();
+                    usuarioRepo.listarActivos().forEach(u ->
+                            pedidoRepo.buscarPorUsuario(u.getId())
+                                    .forEach(p -> usuarioPorPedido.put(p.getId(), u.getNombre() + " " + u.getApellido())));
+                    List<Pedido> pedidos = pedidoRepo.buscarPorEstado(estado);
+                    if (pedidos.isEmpty()) { System.out.println("No hay pedidos con estado " + estado + "."); break; }
+                    System.out.printf("%-5s %-12s %-25s %-10s%n", "ID", "Fecha", "Usuario", "Total");
+                    pedidos.forEach(p -> System.out.printf("%-5d %-12s %-25s $%.2f%n",
+                            p.getId(), p.getFecha(),
+                            usuarioPorPedido.getOrDefault(p.getId(), "—"),
+                            p.getTotal() == null ? 0 : p.getTotal()));
+                    break;
+                }
+                case "4": {
+                    List<Pedido> terminados = pedidoRepo.buscarPorEstado(EstadoPedido.TERMINADO);
+                    double total = terminados.stream()
+                            .mapToDouble(p -> p.getTotal() == null ? 0 : p.getTotal())
+                            .sum();
+                    System.out.println("Total facturado: " + String.format(Locale.US, "$%.2f", total));
+                    break;
+                }
+                case "0": volver = true; break;
+                default: System.out.println("Opción inválida.");
+            }
+        }
     }
 
     // ── Helpers de consola ────────────────────────────────────────
