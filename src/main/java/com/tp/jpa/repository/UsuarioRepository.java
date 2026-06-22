@@ -19,6 +19,8 @@ public class UsuarioRepository extends BaseRepository<Usuario> {
   public Optional<Usuario> buscarPorMail(String mail) {
     EntityManager em = emf.createEntityManager();
     try {
+      // Consulta JPQL: busca un usuario activo por su dirección de correo electrónico.
+      // Filtra por eliminado = false; retorna Optional para manejar el mail no registrado.
       String jpql = "SELECT u FROM Usuario u WHERE u.mail = :mail AND u.eliminado = false";
       List<Usuario> resultado =
           em.createQuery(jpql, Usuario.class).setParameter("mail", mail).getResultList();

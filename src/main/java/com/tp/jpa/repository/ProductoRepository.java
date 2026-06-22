@@ -47,6 +47,8 @@ public class ProductoRepository extends BaseRepository<Producto> {
   public List<Producto> buscarPorCategoria(Long categoriaId) {
     EntityManager em = emf.createEntityManager();
     try {
+      // Consulta JPQL: retorna los productos activos de una categoría específica.
+      // Navega Categoria JOIN productos (relación unidireccional, dueño: Categoria) y filtra eliminado = false.
       String jpql =
           "SELECT p FROM Categoria c JOIN c.productos p "
               + "WHERE c.id = :catId AND p.eliminado = false";

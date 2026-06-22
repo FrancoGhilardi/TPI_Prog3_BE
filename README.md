@@ -1,6 +1,8 @@
-# Food Store JPA — Plantilla TPI (Parte 2)
+# Food Store — Backend JPA / Consola (TPI Prog 3 — Parte 2)
 
-Este README corresponde a la plantilla base para el desarrollo del TPI — Parte 2 (Backend JPA + Consola).
+Sistema de gestión de pedidos de comida con menú de consola, persistencia JPA/Hibernate
+y base de datos H2 en archivo. Permite gestionar categorías, productos, usuarios y pedidos
+(con sus líneas de detalle), con soft delete, consultas JPQL personalizadas y reportes.
 
 ---
 
@@ -14,103 +16,100 @@ Este README corresponde a la plantilla base para el desarrollo del TPI — Parte
 
 ---
 
+## Cómo ejecutar
+
+```bash
+# Ejecutar la app (consola interactiva — requerida para los menús)
+./gradlew run
+
+# Compilar el JAR
+./gradlew build
+
+# Ejecutar el JAR generado
+java -jar build/libs/foodstore-backend-1.0.0.jar
+```
+
+En Windows usar `gradlew.bat` en lugar de `./gradlew`.
+
+La base de datos H2 se crea automáticamente en `./data/jpa_db.mv.db` al primer arranque.
+Hibernate gestiona el esquema con `hbm2ddl.auto = update`.
+
+---
+
 ## Estructura del proyecto
 
 ```
 src/main/java/com/tp/jpa/
 │
-├── model/                        # Entidades JPA (NO modificar)
+├── model/                        # Entidades JPA
 │   ├── Base.java                 # Clase abstracta base (id, eliminado, createdAt)
 │   ├── Calculable.java           # Interfaz con calcularTotal()
 │   ├── Categoria.java
 │   ├── Producto.java
 │   ├── Usuario.java
-│   ├── Pedido.java
+│   ├── Pedido.java               # implements Calculable
 │   ├── DetallePedido.java
 │   └── enums/
-│       ├── Rol.java
-│       ├── Estado.java
-│       └── FormaPago.java
+│       ├── Rol.java              # ADMIN, USUARIO
+│       ├── EstadoPedido.java     # PENDIENTE, CONFIRMADO, TERMINADO, CANCELADO
+│       └── FormaPago.java        # TARJETA, TRANSFERENCIA, EFECTIVO
 │
 ├── util/
-│   └── JPAUtil.java              # Factory singleton (NO modificar — ya implementado)
+│   └── JPAUtil.java              # Factory singleton de EntityManagerFactory
 │
-├── repository/                   # ★ COMPLETAR — queries personalizadas
-│   ├── BaseRepository.java       # CRUD genérico (NO modificar — ya implementado)
-│   ├── CategoriaRepository.java  # Sin queries extra (NO modificar)
-│   ├── ProductoRepository.java   # ★ Implementar buscarPorCategoria()
-│   ├── UsuarioRepository.java    # ★ Implementar buscarPorMail()
-│   └── PedidoRepository.java     # ★ Implementar buscarPorUsuario() y buscarPorEstado()
+├── repository/
+│   ├── BaseRepository.java       # CRUD genérico (guardar, buscarPorId, listarActivos, eliminarLogico)
+│   ├── CategoriaRepository.java  # Hereda todo el CRUD de Base
+│   ├── ProductoRepository.java   # + buscarPorCategoria(), guardarEnCategoria()
+│   ├── UsuarioRepository.java    # + buscarPorMail()
+│   └── PedidoRepository.java     # + buscarPorUsuario(), buscarPorEstado()
 │
-└── Main.java                     # ★ COMPLETAR — menús de consola
+└── Main.java                     # Menú de consola
 ```
+
+La configuración de la base de datos está en `src/main/resources/META-INF/persistence.xml`
+(unidad de persistencia `foodstorePU`).
 
 ---
 
-## Qué está implementado
+## Funcionalidades del menú
 
-| Componente | Estado |
+| Opción | Descripción |
 |---|---|
-| `JPAUtil` | ✅ Completo |
-| `BaseRepository` (guardar, buscarPorId, listarActivos, eliminarLogico) | ✅ Completo |
-| `CategoriaRepository` | ✅ Completo (hereda todo de Base) |
-| Modelo completo (todas las entidades y enums) | ✅ Completo |
-| `Main` — estructura del menú principal | ✅ Esqueleto listo |
+| 1. Gestionar Categorías | Alta, modificar, baja lógica, listado |
+| 2. Gestionar Productos | Alta (con selección de categoría), modificar, baja lógica, listado |
+| 3. Gestionar Usuarios | Alta (mail único), modificar, baja lógica, listado, buscar por mail |
+| 4. Gestionar Pedidos | Alta (transacción atómica con reducción de stock), cambiar estado, baja lógica, listados |
+| 5. Reportes | Productos por categoría, pedidos por usuario, pedidos por estado, total facturado |
+| 0. Salir | Cierra el EntityManagerFactory y termina la aplicación |
 
 ---
 
-## Qué hay que implementar
+## Notas técnicas
 
-### Repositorios
-
-| Clase | Método | Descripción |
-|---|---|---|
-| `ProductoRepository` | `buscarPorCategoria(Long categoriaId)` | JPQL filtrando por categoría y `eliminado = false` |
-| `UsuarioRepository` | `buscarPorMail(String mail)` | JPQL filtrando por mail y `eliminado = false`, retorna `Optional<Usuario>` |
-| `PedidoRepository` | `buscarPorUsuario(Long idUsuario)` | JPQL filtrando por usuario y `eliminado = false` |
-| `PedidoRepository` | `buscarPorEstado(Estado estado)` | JPQL filtrando por estado y `eliminado = false` |
-
-### Menú de consola (`Main.java`)
-
-| Método | Descripción |
-|---|---|
-| `menuCategorias()` | Alta, modificar, baja lógica, listado |
-| `menuProductos()` | Alta (con selección de categoría), modificar, baja lógica, listado |
-| `menuUsuarios()` | Alta (mail único), modificar, baja lógica, listado, buscar por mail |
-| `menuPedidos()` | Alta (transacción atómica), cambiar estado, baja lógica, listados |
-| `menuReportes()` | Productos por categoría, pedidos por usuario/estado, total facturado |
+- **Bajas lógicas:** todas las eliminaciones marcan `eliminado = true`; el registro permanece
+  en la BD y no aparece en los listados de activos.
+- **Alta de pedido:** se ejecuta en una única transacción atómica. Recupera los productos con
+  `em.find()` dentro del mismo EntityManager, calcula subtotales y total, reduce el stock y persiste
+  el pedido (cascade a los detalles). Ante cualquier error hace rollback completo.
+- **Consultas JPQL:** las queries personalizadas filtran por `eliminado = false` y usan parámetros
+  nombrados. Cada una incluye comentario explicativo en el repositorio.
+- **Total facturado:** suma los pedidos en estado `TERMINADO` y formatea con
+  `String.format(Locale.US, "$%.2f", total)`.
 
 ---
 
-## Cómo ejecutar
+## Orden de carga de datos
 
-```bash
-./gradlew run
-```
-
-O compilar y ejecutar el JAR:
-
-```bash
-./gradlew jar
-java -jar build/libs/foodstore-jpa-0.0.1-SNAPSHOT.jar
-```
-
-La base de datos H2 se crea automáticamente en `./data/jpa_db.mv.db` al primer arranque.
-
----
-
-## Credenciales / datos de prueba
-
-No hay carga inicial automática. Crear los datos desde el menú de consola en este orden:
+No hay carga inicial automática. Crear los datos desde el menú en este orden:
 
 1. Categorías
-2. Productos (requieren categoría existente)
+2. Productos (requieren una categoría existente)
 3. Usuarios
-4. Pedidos (requieren usuario y productos existentes)
+4. Pedidos (requieren un usuario y productos existentes)
 
 ---
 
 ## Entrega
 
 - **Video demostrativo:** [link aquí]
-- **Informe PDF:** [link aquí]

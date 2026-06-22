@@ -21,6 +21,8 @@ public class PedidoRepository extends BaseRepository<Pedido> {
   public List<Pedido> buscarPorUsuario(Long idUsuario) {
     EntityManager em = emf.createEntityManager();
     try {
+      // Consulta JPQL: retorna los pedidos activos de un usuario dado su ID.
+      // Navega Usuario JOIN pedidos (relación unidireccional, dueño: Usuario) y filtra eliminado = false.
       String jpql =
           "SELECT p FROM Usuario u JOIN u.pedidos p " + "WHERE u.id = :uid AND p.eliminado = false";
       return em.createQuery(jpql, Pedido.class).setParameter("uid", idUsuario).getResultList();
@@ -36,6 +38,8 @@ public class PedidoRepository extends BaseRepository<Pedido> {
   public List<Pedido> buscarPorEstado(EstadoPedido estadoPedido) {
     EntityManager em = emf.createEntityManager();
     try {
+      // Consulta JPQL: retorna los pedidos activos con un estado específico.
+      // Útil para filtrar PENDIENTE, CONFIRMADO, TERMINADO o CANCELADO; filtra eliminado = false.
       String jpql = "SELECT p FROM Pedido p WHERE p.estado = :estado AND p.eliminado = false";
       return em.createQuery(jpql, Pedido.class)
           .setParameter("estado", estadoPedido)
